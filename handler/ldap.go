@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"gopkg.in/ldap.v2"
+
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -32,13 +34,10 @@ func LDAPIndex(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	// Make LDAP Connection
-	// customerID := credentials.CustomerID
-	// host := credentials.Host
-	// port := credentials.Port
-	// username := credentials.Identifier
-	// password := credentials.Password
 
 	fmt.Println(credentials)
+
+	LDAPSearch()
 	//TODO: Decode Response
 
 	//TODO:  Verify API KEY
@@ -46,4 +45,23 @@ func LDAPIndex(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//TODO: Return LDAP details back in JSON format.
 	//TODO: use a go routine
 	fmt.Fprintf(w, "Hello Go")
+}
+
+// LDAPSearch Return results from LDAP
+func LDAPSearch() {
+
+	// Pull Details from struct
+
+	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", "77.75.124.181", 389))
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+
+	err = l.Bind("LDAP", "Boom01$")
+
+	if err != nil {
+		panic(err)
+	}
+
 }
