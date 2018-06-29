@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"gopkg.in/ldap.v2"
-
 	"github.com/julienschmidt/httprouter"
+	ldap "gopkg.in/ldap.v2"
 )
 
 // ConnectionDetails For LDAP
@@ -16,6 +15,7 @@ type ConnectionDetails struct {
 	CustomerID int `json:"customer_id"`
 	Host       string
 	Port       int
+	BaseDN     string
 	Identifier string
 	Password   string
 }
@@ -23,8 +23,8 @@ type ConnectionDetails struct {
 // LDAPIndex POST Endpoint to retrieve LDAP connection details from Boom API
 func LDAPIndex(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
+	// Decode request body into struct
 	var credentials ConnectionDetails
-
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&credentials)
 
@@ -32,36 +32,43 @@ func LDAPIndex(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if err != nil {
 		panic(err)
 	}
-
 	// Make LDAP Connection
-
-	fmt.Println(credentials)
-
-	LDAPSearch()
-	//TODO: Decode Response
-
-	//TODO:  Verify API KEY
-	//TODO: If API KEY true, make LDAP connection
-	//TODO: Return LDAP details back in JSON format.
-	//TODO: use a go routine
-	fmt.Fprintf(w, "Hello Go")
+	LDAPSearch(&credentials)
 }
 
 // LDAPSearch Return results from LDAP
-func LDAPSearch() {
+func LDAPSearch(credentials *ConnectionDetails) {
 
-	// Pull Details from struct
-
-	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", "77.75.124.181", 389))
+	// Create Connection to LDAP Server
+	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", credentials.Host, credentials.Port))
 	if err != nil {
 		panic(err)
 	}
-	defer l.Close()
+	defer conn.Close()
 
-	err = l.Bind("LDAP", "Boom01$")
-
+	// Create LDAP Binding
+	err = conn.Bind(credentials.Identifier, credentials.Password)
 	if err != nil {
 		panic(err)
 	}
 
+	// Make Search Request
+	searchRequest := ldap.NewSearchRequest(
+		fmt.Sprintf("dc=%v,dc=com,dc=local", credentials.BaseDN),
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		"(&(objectClass=user))",
+		[]string{"displayName", "mail"},
+		nil,
+	)
+
+	// Make Search request
+	sr, err := conn.Search(searchRequest)
+	if err != nil {
+		panic(err)
+	}
+	// Iterate through search results slice and print
+	//TODO: Return them to PHP
+	for _, entry := range sr.Entries {
+		fmt.Printf("%v : %v\n", entry.GetAttributeValue("displayName"), entry.GetAttributeValue("mail"))
+	}
 }
