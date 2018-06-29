@@ -52,12 +52,14 @@ func LDAPSearch(credentials *ConnectionDetails) {
 		panic(err)
 	}
 
+	//TODO: Make request to return just field names from DN search
+
 	// Make Search Request
 	searchRequest := ldap.NewSearchRequest(
 		fmt.Sprintf("dc=%v,dc=com,dc=local", credentials.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(&(objectClass=user))",
-		[]string{"displayName", "mail"},
+		[]string{"displayName", "mail"}, //TODO: create map of field names required to pass to string slice of required data from LDAP
 		nil,
 	)
 
