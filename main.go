@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/BillyPurvis/boom/handler"
+	"github.com/BillyPurvis/boommessaging-go/handler"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/julienschmidt/httprouter"
 )
@@ -18,7 +18,7 @@ func main() {
 	router := httprouter.New()
 
 	router.POST("/", handler.LDAPIndex)
+	router.POST("/ldap", handler.LDAPAttributes)
 
 	log.Fatal(http.ListenAndServe(":4000", router))
-
 }
