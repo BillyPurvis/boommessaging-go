@@ -15,7 +15,6 @@ type DataFields struct {
 
 // GetAttributes Returns Attributes of an entry
 func GetAttributes(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	//w.Header().Set("Content-Type", "application/json")
 	// Decode request body into struct
 	var credentials ldapmethods.ConnectionDetails
 	decoder := json.NewDecoder(r.Body)
