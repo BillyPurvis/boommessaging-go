@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/BillyPurvis/boommessaging-go/authenticate"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -19,10 +20,13 @@ func SetJSONHeader(handler http.Handler) http.Handler {
 // AuthenticateWare Protect Routes that require API Token
 func AuthenticateWare(next httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		// Check Token
+
 		token := r.Header.Get("X-Api-Key")
-		if token == "" {
-			// Return 401 error
+
+		// Check Token
+		err := authenticate.TokenCheck(token)
+
+		if err != nil {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		} else {
 			next(w, r, ps)
