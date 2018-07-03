@@ -41,12 +41,7 @@ func GetContacts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 
-	ldapmethods.GetEntries(&credentials)
+	data := ldapmethods.GetEntries(&credentials)
 
-	// json.NewEncoder(w).Encode(data)
-	// for _, cn := range credentials.Fields {
-	// 	// cn
-	// 	fmt.Printf("%v\n", cn)
-	// }
-
+	json.NewEncoder(w).Encode(data)
 }

@@ -36,7 +36,7 @@ func LDAPConnectionBind(credentials *ConnectionDetails) *ldap.Conn {
 }
 
 // GetEntries Return results from LDAP
-func GetEntries(credentials *ConnectionDetails) {
+func GetEntries(credentials *ConnectionDetails) []map[string]string {
 
 	conn := LDAPConnectionBind(credentials)
 	defer conn.Close() // Defer until end of function
@@ -58,14 +58,22 @@ func GetEntries(credentials *ConnectionDetails) {
 		panic(err)
 	}
 
-	m := make(map[string]interface{}, 0)
+	out := make([]map[string]string, 0)
 
-	for _ := range sr.Entries {
-		for i := range credentials.Fields {
-			m["id"] = "blue"
+	// Iterate through AD Records
+	for i, entry := range sr.Entries {
+
+		out = append(out, make(map[string]string))
+
+		for _, field := range credentials.Fields {
+			out[i][field] = entry.GetAttributeValue(field)
 		}
+
+		//TODO:: Add isIN check function
+		//TODO: rename out variable
 	}
 
+	return out
 }
 
 // GetEntryAttributes Returns attribute field lists for an entry
