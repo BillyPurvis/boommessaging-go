@@ -14,6 +14,7 @@ type ConnectionDetails struct {
 	BaseDN     string
 	Identifier string
 	Password   string
+	Fields     []string `json:"fields,omitempty"`
 }
 
 // LDAPConnectionBind Returns LDAP Connection Binding
@@ -35,17 +36,19 @@ func LDAPConnectionBind(credentials *ConnectionDetails) *ldap.Conn {
 }
 
 // GetEntries Return results from LDAP
-func GetEntries(credentials *ConnectionDetails) []string {
+func GetEntries(credentials *ConnectionDetails) {
 
 	conn := LDAPConnectionBind(credentials)
 	defer conn.Close() // Defer until end of function
+
+	//	l := len(credentials.Fields)
 
 	// Make Search request
 	searchRequest := ldap.NewSearchRequest(
 		fmt.Sprintf("dc=%v,dc=com,dc=local", credentials.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(&(objectClass=user))",
-		[]string{},
+		credentials.Fields,
 		nil,
 	)
 
@@ -55,19 +58,18 @@ func GetEntries(credentials *ConnectionDetails) []string {
 		panic(err)
 	}
 
-	// Assign Attributes slice to var
-	attributesSlice := sr.Entries[0].Attributes
+	m := make(map[string]interface{}, 0)
 
-	// Create New Slice of attribute names and return
-	var attributeNames []string
-	for _, attribute := range attributesSlice {
-		attributeNames = append(attributeNames, attribute.Name)
+	for _ := range sr.Entries {
+		for i := range credentials.Fields {
+			m["id"] = "blue"
+		}
 	}
-	return attributeNames
+
 }
 
-// GetEntryAttributeNames Returns attribute field lists for an entry
-func GetEntryAttributeNames(credentials *ConnectionDetails) []string {
+// GetEntryAttributes Returns attribute field lists for an entry
+func GetEntryAttributes(credentials *ConnectionDetails) []string {
 
 	conn := LDAPConnectionBind(credentials)
 	defer conn.Close() // Defer until end of function

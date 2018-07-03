@@ -30,8 +30,8 @@ func main() {
 	// Create Go Server
 	router := httprouter.New()
 
-	router.POST("/", middleware.AuthenticateWare(ldaphandler.GetAttributes))
-	router.POST("/ldap", middleware.AuthenticateWare(ldaphandler.GetAttributes))
+	router.POST("/ldap/attributes", middleware.AuthenticateWare(ldaphandler.GetAttributes))
+	router.POST("/ldap/contacts", middleware.AuthenticateWare(ldaphandler.GetContacts))
 
 	log.Fatal(http.ListenAndServe(":4000", middleware.SetJSONHeader(router)))
 }

@@ -21,18 +21,32 @@ func GetAttributes(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	err := decoder.Decode(&credentials)
 
 	if err != nil {
-		panic(err)
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
 	}
 
 	// Get attributes and encode to struct
-	// data := GetEntryAttributeNames(&credentials)
-	data := ldapmethods.GetEntries(&credentials)
+	data := ldapmethods.GetEntryAttributes(&credentials)
 	result := DataFields{data}
 	json.NewEncoder(w).Encode(result)
-
 }
 
-// // LDAPContacts Returns
-// func LDAPContacts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+// GetContacts Returns Contacts
+func GetContacts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var credentials ldapmethods.ConnectionDetails
+	err := json.NewDecoder(r.Body).Decode(&credentials)
 
-// }
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
+
+	ldapmethods.GetEntries(&credentials)
+
+	// json.NewEncoder(w).Encode(data)
+	// for _, cn := range credentials.Fields {
+	// 	// cn
+	// 	fmt.Printf("%v\n", cn)
+	// }
+
+}
