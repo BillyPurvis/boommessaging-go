@@ -58,22 +58,19 @@ func GetEntries(credentials *ConnectionDetails) []map[string]string {
 		panic(err)
 	}
 
-	out := make([]map[string]string, 0)
+	entryData := make([]map[string]string, 0)
 
 	// Iterate through AD Records
 	for i, entry := range sr.Entries {
 
-		out = append(out, make(map[string]string))
+		entryData = append(entryData, make(map[string]string))
 
 		for _, field := range credentials.Fields {
-			out[i][field] = entry.GetAttributeValue(field)
+			entryData[i][field] = entry.GetAttributeValue(field)
 		}
-
-		//TODO:: Add isIN check function
-		//TODO: rename out variable
 	}
 
-	return out
+	return entryData
 }
 
 // GetEntryAttributes Returns attribute field lists for an entry
