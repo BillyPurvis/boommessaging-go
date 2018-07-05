@@ -18,9 +18,15 @@ import (
 
 func main() {
 
-	// Make DB Connection
+	// Get Credentials
+	dbUsername := os.Getenv("DB_USERNAME")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	databaseCredentials := fmt.Sprintf("%v:%v@/%v", dbUsername, dbPassword, dbName)
+
+	// Open connection to DB
 	var err error
-	database.DBCon, err = sql.Open("mysql", "root:root@/boom")
+	database.DBCon, err = sql.Open("mysql", databaseCredentials)
 	if err != nil {
 		log.Fatal(err)
 	}

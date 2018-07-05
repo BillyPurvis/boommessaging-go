@@ -14,6 +14,7 @@ func TokenCheck(token string) error {
 
 	// We're being lazy as QueryRow requires 3 round trips
 	// to do prepared statements
+	fmt.Printf("%v", token)
 	var customerID string
 	stmt := fmt.Sprintf("select customer_id from api_keys where `key` = '%v'", token)
 	err := db.QueryRow(stmt).Scan(&customerID)
@@ -21,9 +22,11 @@ func TokenCheck(token string) error {
 	// Determine Error
 	switch {
 	case err == sql.ErrNoRows:
-		return err
+		panic(err)
+		//return err
 	case err != nil:
-		return err
+		panic(err)
+		//return err
 	default:
 		return nil
 	}
