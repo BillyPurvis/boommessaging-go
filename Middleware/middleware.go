@@ -23,10 +23,14 @@ func AuthenticateWare(next httprouter.Handle) httprouter.Handle {
 
 		token := r.Header.Get("X-Api-Key")
 
+		if token == "" {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
 		// Check Token
-		err := authenticate.TokenCheck(token)
+		authCheck := authenticate.TokenCheck(token)
 
-		if err != nil {
+		if authCheck != true {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		} else {
 			next(w, r, ps)

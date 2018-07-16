@@ -36,6 +36,7 @@ func GetContacts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var credentials ldapmethods.ConnectionDetails
 	err := json.NewDecoder(r.Body).Decode(&credentials)
 
+	// Check err
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return

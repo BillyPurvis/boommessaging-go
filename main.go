@@ -22,7 +22,8 @@ func main() {
 	dbUsername := os.Getenv("DB_USERNAME")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
-	databaseCredentials := fmt.Sprintf("%v:%v@/%v", dbUsername, dbPassword, dbName)
+	dbHost := os.Getenv("DB_HOST")
+	databaseCredentials := fmt.Sprintf("%v:%v@tcp(%v:3306)/%v", dbUsername, dbPassword, dbHost, dbName)
 
 	// Open connection to DB
 	var err error

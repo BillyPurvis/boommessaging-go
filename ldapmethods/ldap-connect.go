@@ -8,10 +8,10 @@ import (
 
 // ConnectionDetails For LDAP
 type ConnectionDetails struct {
-	CustomerID int `json:"customer_id"`
+	CustomerID string `json:"customer_id"`
 	Host       string
-	Port       int
-	BaseDN     string
+	Port       string
+	BaseDN     string `json:"base_dn"`
 	Identifier string
 	Password   string
 	Fields     []string `json:"fields,omitempty"`
@@ -20,7 +20,7 @@ type ConnectionDetails struct {
 // LDAPConnectionBind Returns LDAP Connection Binding
 func LDAPConnectionBind(credentials *ConnectionDetails) *ldap.Conn {
 	// Create Connection to LDAP Server
-	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", credentials.Host, credentials.Port))
+	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%v", credentials.Host, credentials.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -37,11 +37,8 @@ func LDAPConnectionBind(credentials *ConnectionDetails) *ldap.Conn {
 
 // GetEntries Return results from LDAP
 func GetEntries(credentials *ConnectionDetails) []map[string]*string {
-
 	conn := LDAPConnectionBind(credentials)
 	defer conn.Close() // Defer until end of function
-
-	//	l := len(credentials.Fields)
 
 	// Make Search request
 	searchRequest := ldap.NewSearchRequest(
