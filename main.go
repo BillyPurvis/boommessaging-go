@@ -28,6 +28,7 @@ func main() {
 	// Open connection to DB
 	var err error
 	database.DBCon, err = sql.Open("mysql", databaseCredentials)
+	defer database.DBCon.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
