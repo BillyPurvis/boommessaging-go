@@ -3,6 +3,7 @@ package ldapmethods
 import (
 	"fmt"
 
+	"github.com/BillyPurvis/boommessaging-go/uuid"
 	ldap "gopkg.in/ldap.v2"
 )
 
@@ -36,7 +37,7 @@ func LDAPConnectionBind(credentials *ConnectionDetails) *ldap.Conn {
 }
 
 // GetEntries Return results from LDAP
-func GetEntries(credentials *ConnectionDetails) []map[string]*string {
+func GetEntries(credentials *ConnectionDetails) []map[string]interface{} {
 	conn := LDAPConnectionBind(credentials)
 	defer conn.Close() // Defer until end of function
 
@@ -56,21 +57,23 @@ func GetEntries(credentials *ConnectionDetails) []map[string]*string {
 	}
 
 	// Create list of maps
-	entryList := make([]map[string]*string, 0)
+	entryList := make([]map[string]interface{}, 0)
 	// Iterate through AD Records
 	for i, entry := range sr.Entries {
 
 		// Create new map item and append to list
-		entryList = append(entryList, make(map[string]*string))
+		entryList = append(entryList, make(map[string]interface{}))
 
 		// Iterate through requestedFields
 		for _, field := range credentials.Fields {
 
 			fieldValue := entry.GetAttributeValue(field)
 
+			uuid := uuid.CreateUUID()
+			entryList[i]["uuid"] = uuid
 			// Check for empty fields and assign nil if empty
 			if fieldValue != "" {
-				entryList[i][field] = &fieldValue //
+				entryList[i][field] = fieldValue //
 			} else {
 				entryList[i][field] = nil
 			}
