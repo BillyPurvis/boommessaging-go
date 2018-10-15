@@ -2,6 +2,7 @@ package ldapmethods
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/BillyPurvis/boommessaging-go/uuid"
 	ldap "gopkg.in/ldap.v2"
@@ -9,13 +10,14 @@ import (
 
 // ConnectionDetails For LDAP
 type ConnectionDetails struct {
-	CustomerID string `json:"customer_id"`
-	Host       string
-	Port       string
-	BaseDN     string `json:"base_dn"`
-	Identifier string
-	Password   string
-	Fields     []string `json:"fields,omitempty"`
+	CustomerID  string `json:"customer_id"`
+	Host        string
+	Port        string
+	BaseDN      string `json:"base_dn"`
+	Identifier  string
+	Password    string
+	Fields      []string               `json:"fields,omitempty"`
+	QueryParams map[string]interface{} `json:"query_params,omitempty"`
 }
 
 // LDAPConnectionBind Returns LDAP Connection Binding
@@ -41,11 +43,17 @@ func GetEntries(credentials *ConnectionDetails) []map[string]interface{} {
 	conn := LDAPConnectionBind(credentials)
 	defer conn.Close() // Defer until end of function
 
+	var searchQuery strings.Builder
+	for serachAttribute, searchTerm := range credentials.QueryParams {
+		// Build concatinated byte slice
+		searchQuery.WriteString(fmt.Sprintf("(%v=%v)", serachAttribute, searchTerm))
+	}
+
 	// Make Search request
 	searchRequest := ldap.NewSearchRequest(
 		fmt.Sprintf("dc=%v,dc=com,dc=local", credentials.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(&(objectClass=user))",
+		fmt.Sprintf("(&%v)", searchQuery.String()),
 		credentials.Fields,
 		nil,
 	)
