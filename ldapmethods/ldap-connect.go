@@ -2,6 +2,7 @@ package ldapmethods
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -19,7 +20,7 @@ type ConnectionDetails struct {
 	Password    string
 	Fields      []string               `json:"fields,omitempty"`
 	QueryParams map[string]interface{} `json:"query_params,omitempty"`
-	Limit       string                 `json:"limit"`
+	Limit       string                 `json:"limit,omitempty"`
 }
 
 // LDAPConnectionBind Returns LDAP Connection Binding
@@ -57,9 +58,12 @@ func GetEntries(connectionDetails *ConnectionDetails) []map[string]interface{} {
 	attributes := connectionDetails.Fields
 
 	// Pagination
-	// We need a 32 bit in.
-	pageSize, _ := strconv.ParseUint(connectionDetails.Limit, 10, 64)
-	pageSizeuint := uint32(pageSize)
+
+	var pageSizeuint uint32 = math.MaxUint32
+	if connectionDetails.Limit != "" {
+		pageSize, _ := strconv.ParseUint(connectionDetails.Limit, 10, 64)
+		pageSizeuint = uint32(pageSize)
+	}
 
 	pagingControl := ldap.NewControlPaging(pageSizeuint)
 	controls := []ldap.Control{pagingControl}
