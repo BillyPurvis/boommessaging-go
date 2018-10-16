@@ -2,6 +2,7 @@ package ldapmethods
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/BillyPurvis/boommessaging-go/uuid"
@@ -18,18 +19,19 @@ type ConnectionDetails struct {
 	Password    string
 	Fields      []string               `json:"fields,omitempty"`
 	QueryParams map[string]interface{} `json:"query_params,omitempty"`
+	Limit       string                 `json:"limit"`
 }
 
 // LDAPConnectionBind Returns LDAP Connection Binding
-func LDAPConnectionBind(credentials *ConnectionDetails) *ldap.Conn {
+func LDAPConnectionBind(connectionDetails *ConnectionDetails) *ldap.Conn {
 	// Create Connection to LDAP Server
-	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%v", credentials.Host, credentials.Port))
+	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%v", connectionDetails.Host, connectionDetails.Port))
 	if err != nil {
 		panic(err)
 	}
 
 	// Create LDAP Binding
-	err = conn.Bind(credentials.Identifier, credentials.Password)
+	err = conn.Bind(connectionDetails.Identifier, connectionDetails.Password)
 	if err != nil {
 		panic(err)
 	}
@@ -39,23 +41,36 @@ func LDAPConnectionBind(credentials *ConnectionDetails) *ldap.Conn {
 }
 
 // GetEntries Return results from LDAP
-func GetEntries(credentials *ConnectionDetails) []map[string]interface{} {
-	conn := LDAPConnectionBind(credentials)
+func GetEntries(connectionDetails *ConnectionDetails) []map[string]interface{} {
+	conn := LDAPConnectionBind(connectionDetails)
 	defer conn.Close() // Defer until end of function
 
+	// Build concatinated byte slice of all filter options
+	// (&(attribute=value/regex)(attribute=value))
 	var searchQuery strings.Builder
-	for serachAttribute, searchTerm := range credentials.QueryParams {
-		// Build concatinated byte slice
+	for serachAttribute, searchTerm := range connectionDetails.QueryParams {
 		searchQuery.WriteString(fmt.Sprintf("(%v=%v)", serachAttribute, searchTerm))
 	}
 
-	// Make Search request
+	filters := fmt.Sprintf("(&%v)", searchQuery.String())
+	// Fields to be retrieved, IE, name, mail etc.
+	attributes := connectionDetails.Fields
+
+	// Pagination
+	// We need a 32 bit in.
+	pageSize, _ := strconv.ParseUint(connectionDetails.Limit, 10, 64)
+	pageSizeuint := uint32(pageSize)
+
+	pagingControl := ldap.NewControlPaging(pageSizeuint)
+	controls := []ldap.Control{pagingControl}
+
+	// Make Search Request defining base DN, attributes and filters
 	searchRequest := ldap.NewSearchRequest(
-		fmt.Sprintf("dc=%v,dc=com,dc=local", credentials.BaseDN),
+		fmt.Sprintf("dc=%v,dc=com,dc=local", connectionDetails.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(&%v)", searchQuery.String()),
-		credentials.Fields,
-		nil,
+		filters,
+		attributes,
+		controls,
 	)
 
 	// Make Search Request
@@ -73,7 +88,7 @@ func GetEntries(credentials *ConnectionDetails) []map[string]interface{} {
 		entryList = append(entryList, make(map[string]interface{}))
 
 		// Iterate through requestedFields
-		for _, field := range credentials.Fields {
+		for _, field := range connectionDetails.Fields {
 
 			fieldValue := entry.GetAttributeValue(field)
 
@@ -92,14 +107,14 @@ func GetEntries(credentials *ConnectionDetails) []map[string]interface{} {
 }
 
 // GetEntryAttributes Returns attribute field lists for an entry
-func GetEntryAttributes(credentials *ConnectionDetails) []string {
+func GetEntryAttributes(connectionDetails *ConnectionDetails) []string {
 
-	conn := LDAPConnectionBind(credentials)
+	conn := LDAPConnectionBind(connectionDetails)
 	defer conn.Close() // Defer until end of function
 
 	// Make Search request
 	searchRequest := ldap.NewSearchRequest(
-		fmt.Sprintf("dc=%v,dc=com,dc=local", credentials.BaseDN),
+		fmt.Sprintf("dc=%v,dc=com,dc=local", connectionDetails.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(&(objectClass=user))",
 		[]string{},
