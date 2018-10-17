@@ -42,7 +42,11 @@ func GetContacts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 
-	data := ldapmethods.GetEntries(&credentials)
+	data, err := ldapmethods.GetEntries(&credentials)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
 
 	json.NewEncoder(w).Encode(data)
 }

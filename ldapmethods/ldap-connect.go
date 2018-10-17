@@ -30,19 +30,25 @@ func LDAPConnectionBind(connectionDetails *ConnectionDetails) *ldap.Conn {
 	if err != nil {
 		panic(err)
 	}
-
 	// Create LDAP Binding
 	err = conn.Bind(connectionDetails.Identifier, connectionDetails.Password)
 	if err != nil {
 		panic(err)
 	}
-
 	// Return connection binding
 	return conn
 }
 
+// func convertStringToUint32(string stringInt) (uint32, error) {
+// 	pageSize, conversionErr := strconv.ParseUint(stringInt, 10, 32)
+// 	if conversionErr != nil {
+// 		// How do I handle this?
+// 		return 0, err
+// 	}
+// }
+
 // GetEntries Return results from LDAP
-func GetEntries(connectionDetails *ConnectionDetails) []map[string]interface{} {
+func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{}, error) {
 	conn := LDAPConnectionBind(connectionDetails)
 	defer conn.Close() // Defer until end of function
 
@@ -54,20 +60,21 @@ func GetEntries(connectionDetails *ConnectionDetails) []map[string]interface{} {
 	}
 
 	filters := fmt.Sprintf("(&%v)", searchQuery.String())
-	// Fields to be retrieved, IE, name, mail etc.
 	attributes := connectionDetails.Fields
 
 	// Pagination
-
 	var pageSizeuint uint32 = math.MaxUint32
 	if connectionDetails.Limit != "" {
-		pageSize, _ := strconv.ParseUint(connectionDetails.Limit, 10, 64)
+		pageSize, conversionErr := strconv.ParseUint(connectionDetails.Limit, 10, 32)
+		if conversionErr != nil {
+			// How do I handle this?
+			return nil, conversionErr
+		}
 		pageSizeuint = uint32(pageSize)
 	}
 
 	pagingControl := ldap.NewControlPaging(pageSizeuint)
 	controls := []ldap.Control{pagingControl}
-
 	// Make Search Request defining base DN, attributes and filters
 	searchRequest := ldap.NewSearchRequest(
 		fmt.Sprintf("dc=%v,dc=com,dc=local", connectionDetails.BaseDN),
@@ -106,8 +113,7 @@ func GetEntries(connectionDetails *ConnectionDetails) []map[string]interface{} {
 			}
 		}
 	}
-
-	return entryList
+	return entryList, nil
 }
 
 // GetEntryAttributes Returns attribute field lists for an entry
