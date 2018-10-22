@@ -2,7 +2,7 @@ package ldapmethods
 
 import (
 	"fmt"
-	"math"
+	"log"
 	"strconv"
 	"strings"
 
@@ -39,49 +39,45 @@ func LDAPConnectionBind(connectionDetails *ConnectionDetails) *ldap.Conn {
 	return conn
 }
 
-// func convertStringToUint32(string stringInt) (uint32, error) {
-// 	pageSize, conversionErr := strconv.ParseUint(stringInt, 10, 32)
-// 	if conversionErr != nil {
-// 		// How do I handle this?
-// 		return 0, err
-// 	}
-// }
+// Convert String to a unsigned 32 bit integer
+func convertStringToUint32(stringInt string) (uint32, error) {
+	uInt64, err := strconv.ParseUint(stringInt, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(uInt64), nil
+}
 
-// GetEntries Return results from LDAP
-func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{}, error) {
-	conn := LDAPConnectionBind(connectionDetails)
-	defer conn.Close() // Defer until end of function
-
-	// Build concatinated byte slice of all filter options
-	// (&(attribute=value/regex)(attribute=value))
+// Build concatinated byte slice of all filter options
+// (&(attribute=value/regex)(attribute=value))
+func buildSearchTermsString(connectionDetails *ConnectionDetails) string {
 	var searchQuery strings.Builder
 	for serachAttribute, searchTerm := range connectionDetails.QueryParams {
 		searchQuery.WriteString(fmt.Sprintf("(%v=%v)", serachAttribute, searchTerm))
 	}
+	return searchQuery.String()
+}
 
-	filters := fmt.Sprintf("(&%v)", searchQuery.String())
-	attributes := connectionDetails.Fields
+// GetEntries Return results from LDAP
+func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{}, error) {
+	conn := LDAPConnectionBind(connectionDetails)
+	defer conn.Close()
 
-	// Pagination
-	var pageSizeuint uint32 = math.MaxUint32
-	if connectionDetails.Limit != "" {
-		pageSize, conversionErr := strconv.ParseUint(connectionDetails.Limit, 10, 32)
-		if conversionErr != nil {
-			// How do I handle this?
-			return nil, conversionErr
-		}
-		pageSizeuint = uint32(pageSize)
+	searchQuery := buildSearchTermsString(connectionDetails)
+
+	pageSizeuint, err := convertStringToUint32(connectionDetails.Limit)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	pagingControl := ldap.NewControlPaging(pageSizeuint)
-	controls := []ldap.Control{pagingControl}
 	// Make Search Request defining base DN, attributes and filters
 	searchRequest := ldap.NewSearchRequest(
 		fmt.Sprintf("dc=%v,dc=com,dc=local", connectionDetails.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		filters,
-		attributes,
-		controls,
+		fmt.Sprintf("(&%v)", searchQuery),
+		connectionDetails.Fields,
+		[]ldap.Control{pagingControl},
 	)
 
 	// Make Search Request
