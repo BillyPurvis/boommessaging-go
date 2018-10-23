@@ -15,6 +15,7 @@ type ConnectionDetails struct {
 	CustomerID  string `json:"customer_id"`
 	Host        string
 	Port        string
+	CN          string
 	BaseDN      string `json:"base_dn"`
 	Identifier  string
 	Password    string
@@ -25,11 +26,12 @@ type ConnectionDetails struct {
 
 // LDAPConnectionBind Returns LDAP Connection Binding
 func LDAPConnectionBind(connectionDetails *ConnectionDetails) *ldap.Conn {
-	// Create Connection to LDAP Server
+	// By default, Port 389 should support SSL. If not, the user can define port 636 which is SSL.
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%v", connectionDetails.Host, connectionDetails.Port))
 	if err != nil {
 		panic(err)
 	}
+
 	// Create LDAP Binding
 	err = conn.Bind(connectionDetails.Identifier, connectionDetails.Password)
 	if err != nil {
@@ -73,7 +75,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	pagingControl := ldap.NewControlPaging(pageSizeuint)
 	// Make Search Request defining base DN, attributes and filters
 	searchRequest := ldap.NewSearchRequest(
-		fmt.Sprintf("dc=%v,dc=com,dc=local", connectionDetails.BaseDN),
+		fmt.Sprintf("cn=%v,dc=%v,dc=com,dc=local", connectionDetails.CN, connectionDetails.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf("(&%v)", searchQuery),
 		connectionDetails.Fields,
