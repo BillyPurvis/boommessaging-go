@@ -66,13 +66,13 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	defer conn.Close()
 
 	searchQuery := buildSearchTermsString(connectionDetails)
-
 	pageSizeuint, err := convertStringToUint32(connectionDetails.Limit)
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	pagingControl := ldap.NewControlPaging(pageSizeuint)
+
 	// Make Search Request defining base DN, attributes and filters
 	searchRequest := ldap.NewSearchRequest(
 		fmt.Sprintf("cn=%v,dc=%v,dc=com,dc=local", connectionDetails.CN, connectionDetails.BaseDN),
@@ -105,7 +105,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 			entryList[i]["uuid"] = uuid
 			// Check for empty fields and assign nil if empty
 			if fieldValue != "" {
-				entryList[i][field] = fieldValue //
+				entryList[i][field] = fieldValue
 			} else {
 				entryList[i][field] = nil
 			}
