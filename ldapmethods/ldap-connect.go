@@ -2,7 +2,6 @@ package ldapmethods
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -69,7 +68,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	pageSizeuint, err := convertStringToUint32(connectionDetails.Limit)
 
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	pagingControl := ldap.NewControlPaging(pageSizeuint)
 
@@ -85,7 +84,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	// Make Search Request
 	sr, err := conn.Search(searchRequest)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// Create list of maps
@@ -115,7 +114,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 }
 
 // GetEntryAttributes Returns attribute field lists for an entry
-func GetEntryAttributes(connectionDetails *ConnectionDetails) []string {
+func GetEntryAttributes(connectionDetails *ConnectionDetails) ([]string, error) {
 
 	conn := LDAPConnectionBind(connectionDetails)
 	defer conn.Close() // Defer until end of function
@@ -124,7 +123,7 @@ func GetEntryAttributes(connectionDetails *ConnectionDetails) []string {
 	searchRequest := ldap.NewSearchRequest(
 		fmt.Sprintf("dc=%v,dc=com,dc=local", connectionDetails.BaseDN),
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(&(objectClass=user))",
+		"(&)", //TODO We don't need to filter?
 		[]string{},
 		nil,
 	)
@@ -132,7 +131,7 @@ func GetEntryAttributes(connectionDetails *ConnectionDetails) []string {
 	// Make Search Request
 	sr, err := conn.Search(searchRequest)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// Assign Attributes slice to var
@@ -143,5 +142,5 @@ func GetEntryAttributes(connectionDetails *ConnectionDetails) []string {
 	for _, attribute := range attributesSlice {
 		attributeNames = append(attributeNames, attribute.Name)
 	}
-	return attributeNames
+	return attributeNames, nil
 }
