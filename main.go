@@ -12,11 +12,18 @@ import (
 	"github.com/BillyPurvis/boommessaging-go/middleware"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/julienschmidt/httprouter"
+	"github.com/sirupsen/logrus"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
+	// Configure Logger
+	f, fileErr := os.OpenFile("./error.log", os.O_WRONLY|os.O_CREATE, 0755)
+	if fileErr != nil {
+		log.Fatal(fileErr) // We must have log working
+	}
+	logrus.SetOutput(f)
 
 	// Get Credentials
 	dbUsername := os.Getenv("DB_USERNAME")
@@ -30,7 +37,7 @@ func main() {
 	database.DBCon, err = sql.Open("mysql", databaseCredentials)
 	defer database.DBCon.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // we must have this working
 	}
 
 	fmt.Printf("Starting Server on port %v:%v\n", os.Getenv("APP_URL"), os.Getenv("APP_PORT"))
