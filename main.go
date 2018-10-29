@@ -59,6 +59,6 @@ func serverBootMessage(AppURL string, AppPort string) {
 	fig := figure.NewFigure("BOOMERANG", "slant", true)
 	fig.Print()
 	fmt.Println("\n=====================================================================================\n\n")
-	fmt.Printf("Author: Billy Purvis\n\n\n* Server Status: Operational at http://%v:%v\n* Database Status: Connected", AppURL, AppPort)
+	fmt.Printf("Author: Billy Purvis\n\n\n* Server Status: Operational at http://%v:%v\n* Database Status: Connected\n\n", AppURL, AppPort)
 
 }

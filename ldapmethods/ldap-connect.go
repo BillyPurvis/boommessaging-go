@@ -17,14 +17,14 @@ var validate *validator.Validate
 
 // ConnectionDetails For LDAP
 type ConnectionDetails struct {
-	CustomerID  string `json:"customer_id"`
-	Host        string
-	Port        string
-	CN          string
-	BaseDN      string `json:"base_dn"`
-	Identifier  string
+	CustomerID  string                 `json:"customer_id,validate:required"`
+	Host        string                 `validate:"required"`
+	Port        string                 `validate:"required"`
+	CN          string                 `validate:"required"`
+	BaseDN      string                 `json:"base_dn,validate:required"`
+	Identifier  string                 `validate:"required"`
 	Password    string                 `validate:"required"`
-	RequestID   string                 `json:"request_id"`
+	RequestID   string                 `json:"request_id,validate:required"`
 	Fields      map[string]string      `json:"fields,omitempty"`
 	QueryParams map[string]interface{} `json:"query_params,omitempty"`
 }
@@ -121,7 +121,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 		logrus.Info("LDAP Contacts batch count: ", len(records.Entries))
 		fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
 
-		recordTotal += len(records.Entries)
+		recordTotal += len(records.Entries) // returns slice of structs [Entry]
 
 		// Records is a batch of 1000 records, pipe them off to be inserted batch by batch
 
