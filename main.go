@@ -32,6 +32,9 @@ func main() {
 	dbHost := os.Getenv("DB_HOST")
 	databaseCredentials := fmt.Sprintf("%v:%v@tcp(%v:3306)/%v", dbUsername, dbPassword, dbHost, dbName)
 
+	AppPort := os.Getenv("APP_PORT")
+	AppURL := os.Getenv("APP_URL")
+
 	// Open connection to DB
 	var err error
 	database.DBCon, err = sql.Open("mysql", databaseCredentials)
@@ -40,7 +43,7 @@ func main() {
 		log.Fatal(err) // we must have this working
 	}
 
-	fmt.Printf("Starting Server on port %v:%v\n", os.Getenv("APP_URL"), os.Getenv("APP_PORT"))
+	fmt.Printf("Starting Server on port http://%v:%v\n", AppURL, AppPort)
 
 	// Create Go Server
 	router := httprouter.New()
@@ -48,5 +51,5 @@ func main() {
 	router.POST("/ldap/attributes", middleware.AuthenticateWare(ldaphandler.GetAttributes))
 	router.POST("/ldap/contacts", middleware.AuthenticateWare(ldaphandler.GetContacts))
 
-	log.Fatal(http.ListenAndServe(":4000", middleware.SetJSONHeader(router)))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", AppPort), middleware.SetJSONHeader(router)))
 }
