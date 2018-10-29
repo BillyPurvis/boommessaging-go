@@ -21,7 +21,7 @@ type ConnectionDetails struct {
 	Identifier  string
 	Password    string
 	RequestID   string                 `json:"request_id"`
-	Fields      []map[string]string    `json:"fields,omitempty"`
+	Fields      map[string]string      `json:"fields,omitempty"`
 	QueryParams map[string]interface{} `json:"query_params,omitempty"`
 }
 
@@ -79,13 +79,21 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	pagingControl := ldap.NewControlPaging(1000)
 
 	var recordTotal int
+
+	var attributeFields []string
+	for _, value := range connectionDetails.Fields {
+		attributeFields = append(attributeFields, value)
+	}
+
+	fmt.Println(attributeFields)
+
 	for {
 		// Make Search Request defining base DN, attributes and filters
 		searchRequest := ldap.NewSearchRequest(
 			fmt.Sprintf("cn=%v,dc=%v,dc=com,dc=local", connectionDetails.CN, connectionDetails.BaseDN),
 			ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 			fmt.Sprintf("(&%v)", searchQuery),
-			[]string{},
+			attributeFields,
 			[]ldap.Control{pagingControl},
 		)
 
@@ -101,8 +109,16 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 		recordTotal += len(records.Entries)
 
 		// TODO: Add logic for saving and such
-		// TODO: Pass
+		// TODO:  Convert fields to string
 
+		for _, entry := range records.Entries {
+			for _, field := range connectionDetails.Fields {
+
+				field = entry.GetAttributeValue(field)
+				fmt.Println(field)
+			}
+
+		}
 		// Loop through fields and map and store.
 		updatedControl := ldap.FindControl(records.Controls, ldap.ControlTypePaging)
 		if ctrl, ok := updatedControl.(*ldap.ControlPaging); ctrl != nil && ok && len(ctrl.Cookie) != 0 {
@@ -114,7 +130,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 
 	}
 
-	fmt.Println(recordTotal)
+	fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
 	// // Make Search Request
 	// sr, err := conn.Search(searchRequest)
 	// if err != nil {
