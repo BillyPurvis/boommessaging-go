@@ -5,9 +5,13 @@ import (
 	"strconv"
 	"strings"
 
+	"gopkg.in/go-playground/validator.v9"
+
 	logrus "github.com/sirupsen/logrus"
 	ldap "gopkg.in/ldap.v2"
 )
+
+var validate *validator.Validate
 
 // Fields is a slice of maps where the key is the device var ID and key is the value
 
@@ -19,10 +23,14 @@ type ConnectionDetails struct {
 	CN          string
 	BaseDN      string `json:"base_dn"`
 	Identifier  string
-	Password    string
+	Password    string                 `validate:"required"`
 	RequestID   string                 `json:"request_id"`
 	Fields      map[string]string      `json:"fields,omitempty"`
 	QueryParams map[string]interface{} `json:"query_params,omitempty"`
+}
+
+type resultsSet struct {
+	Result []map[string]string
 }
 
 // LDAPConnectionBind Returns LDAP Connection Binding
@@ -62,26 +70,39 @@ func buildSearchTermsString(connectionDetails *ConnectionDetails) string {
 	return searchQuery.String()
 }
 
+// Take a map and convert it to a string representation of the map
+func mapToStringRepresentation(hashMap map[string]string) []string {
+	// Get attribute fields from POST Body as string
+	var attributeFields []string
+	for _, value := range hashMap {
+		attributeFields = append(attributeFields, value)
+	}
+	return attributeFields
+}
+
 // GetEntries Return results from LDAP
 func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{}, error) {
 
+	// Validate Struct first
+	validate = validator.New()
+	err := validate.Struct(connectionDetails)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make LDAP Connection
 	conn, err := LDAPConnectionBind(connectionDetails)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
+	// Build search query and parameters.
 	searchQuery := buildSearchTermsString(connectionDetails)
-	pagingControl := ldap.NewControlPaging(1000)
+	pagingControl := ldap.NewControlPaging(10)
+	attributeFields := mapToStringRepresentation(connectionDetails.Fields)
 
 	var recordTotal int
-
-	// Get attribute fields from POST Body as string
-	var attributeFields []string
-	for _, value := range connectionDetails.Fields {
-		attributeFields = append(attributeFields, value)
-	}
-
 	for {
 		// Make Search Request defining base DN, attributes and filters
 		searchRequest := ldap.NewSearchRequest(
@@ -97,23 +118,21 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 			return nil, err
 		}
 
-		logrus.WithFields(logrus.Fields{
-			"LDAP AD Batch Count": len(records.Entries),
-		}).Info("LDAP Contacts batch count")
+		logrus.Info("LDAP Contacts batch count: ", len(records.Entries))
+		fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
 
 		recordTotal += len(records.Entries)
 
-		// TODO: Add logic for saving and such
-		// TODO:  Convert fields to string
+		// Records is a batch of 1000 records, pipe them off to be inserted batch by batch
 
-		for _, entry := range records.Entries {
-			for _, field := range connectionDetails.Fields {
+		// //
+		// for _, entry := range records.Entries {
+		// 	for _, field := range connectionDetails.Fields {
+		// 		// TODO: Add Logic for saving to device vars
+		// 		field = entry.GetAttributeValue(field)
 
-				// TODO: Add Logic for saving to device vars
-				field = entry.GetAttributeValue(field)
-
-			}
-		}
+		// 	}
+		// }
 		// Loop through fields and map and store.
 		updatedControl := ldap.FindControl(records.Controls, ldap.ControlTypePaging)
 		if ctrl, ok := updatedControl.(*ldap.ControlPaging); ctrl != nil && ok && len(ctrl.Cookie) != 0 {
