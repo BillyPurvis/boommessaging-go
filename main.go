@@ -10,6 +10,7 @@ import (
 	"github.com/BillyPurvis/boommessaging-go/database"
 	"github.com/BillyPurvis/boommessaging-go/ldaphandler"
 	"github.com/BillyPurvis/boommessaging-go/middleware"
+	figure "github.com/common-nighthawk/go-figure"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
@@ -43,8 +44,7 @@ func main() {
 		log.Fatal(err) // we must have this working
 	}
 
-	fmt.Printf("Starting Server on port http://%v:%v\n", AppURL, AppPort)
-
+	serverBootMessage(AppURL, AppPort)
 	// Create Go Server
 	router := httprouter.New()
 
@@ -52,4 +52,13 @@ func main() {
 	router.POST("/ldap/contacts", middleware.AuthenticateWare(ldaphandler.GetContacts))
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", AppPort), middleware.SetJSONHeader(router)))
+}
+
+func serverBootMessage(AppURL string, AppPort string) {
+	fmt.Println("=====================================================================================")
+	fig := figure.NewFigure("BOOMERANG", "slant", true)
+	fig.Print()
+	fmt.Println("\n=====================================================================================\n\n")
+	fmt.Printf("Author: Billy Purvis\n\n\n* Server Status: Operational at http://%v:%v\n* Database Status: Connected", AppURL, AppPort)
+
 }
