@@ -72,20 +72,15 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	defer conn.Close()
 
 	searchQuery := buildSearchTermsString(connectionDetails)
-	// pageSizeuint, err := convertStringToUint32(connectionDetails.Limit)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	pagingControl := ldap.NewControlPaging(1000)
 
 	var recordTotal int
 
+	// Get attribute fields from POST Body as string
 	var attributeFields []string
 	for _, value := range connectionDetails.Fields {
 		attributeFields = append(attributeFields, value)
 	}
-
-	fmt.Println(attributeFields)
 
 	for {
 		// Make Search Request defining base DN, attributes and filters
@@ -114,10 +109,10 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 		for _, entry := range records.Entries {
 			for _, field := range connectionDetails.Fields {
 
+				// TODO: Add Logic for saving to device vars
 				field = entry.GetAttributeValue(field)
-				fmt.Println(field)
-			}
 
+			}
 		}
 		// Loop through fields and map and store.
 		updatedControl := ldap.FindControl(records.Controls, ldap.ControlTypePaging)
@@ -125,9 +120,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 			pagingControl.SetCookie(ctrl.Cookie)
 			continue
 		}
-
 		break
-
 	}
 
 	fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
