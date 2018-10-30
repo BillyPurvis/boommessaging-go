@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/BillyPurvis/boommessaging-go/database"
+
 	"gopkg.in/go-playground/validator.v9"
 
 	logrus "github.com/sirupsen/logrus"
@@ -102,6 +104,27 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	pagingControl := ldap.NewControlPaging(10)
 	attributeFields := mapToStringRepresentation(connectionDetails.Fields)
 
+	// test insert
+	db := database.DBCon
+
+	stmt, err := db.Prepare("INSERT INTO device_request_broadcasts (device_request_id, devices_var_name_id,file_column,file_row, value) VALUES(1,1,1,1,1)")
+
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+
+	res, err := stmt.Exec() // Pass alues
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+
+	fmt.Print(id)
+
 	var recordTotal int
 	for {
 		// Make Search Request defining base DN, attributes and filters
@@ -119,7 +142,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 		}
 
 		logrus.Info("LDAP Contacts batch count: ", len(records.Entries))
-		fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
+		//fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
 
 		recordTotal += len(records.Entries) // returns slice of structs [Entry]
 
