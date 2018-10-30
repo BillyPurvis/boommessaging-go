@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/BillyPurvis/boommessaging-go/database"
 
@@ -107,13 +108,13 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	// test insert
 	db := database.DBCon
 
-	stmt, err := db.Prepare("INSERT INTO device_request_broadcasts (device_request_id, devices_var_name_id,file_column,file_row, value) VALUES(1,1,1,1,1)")
+	stmt, err := db.Prepare("INSERT INTO device_request_broadcasts (device_request_id, devices_var_name_id,file_column,file_row, value) VALUES(?,?,?,?,?)")
 
 	if err != nil {
 		fmt.Print(err.Error())
 	}
 
-	res, err := stmt.Exec() // Pass alues
+	res, err := stmt.Exec("1", "1", "1", "1", time.Now()) // Pass alues
 	if err != nil {
 		fmt.Print(err.Error())
 	}
@@ -142,7 +143,8 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 		}
 
 		logrus.Info("LDAP Contacts batch count: ", len(records.Entries))
-		//fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
+
+		// fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
 
 		recordTotal += len(records.Entries) // returns slice of structs [Entry]
 
