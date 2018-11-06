@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/BillyPurvis/boommessaging-go/database"
 
 	"gopkg.in/go-playground/validator.v9"
 
@@ -30,6 +27,7 @@ type ConnectionDetails struct {
 	RequestID   string                 `json:"request_id,validate:required"`
 	Fields      map[string]string      `json:"fields,omitempty"`
 	QueryParams map[string]interface{} `json:"query_params,omitempty"`
+	BatchLimit  string                 `json:"batch_limit,omitempty"`
 }
 
 type resultsSet struct {
@@ -100,31 +98,43 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	}
 	defer conn.Close()
 
+	var batchLimit uint32 = 1000
+	if connectionDetails.BatchLimit != "" {
+		customBatchLimit, err := convertStringToUint32(connectionDetails.BatchLimit)
+		if err != nil {
+			return nil, err
+		}
+		// If the incoming batch limit is more than 1000, don't update batch limit
+		if customBatchLimit <= 1000 {
+			batchLimit = customBatchLimit
+		}
+	}
+
 	// Build search query and parameters.
 	searchQuery := buildSearchTermsString(connectionDetails)
-	pagingControl := ldap.NewControlPaging(10)
+	pagingControl := ldap.NewControlPaging(batchLimit)
 	attributeFields := mapToStringRepresentation(connectionDetails.Fields)
 
-	// test insert
-	db := database.DBCon
+	// // test insert
+	// db := database.DBCon
 
-	stmt, err := db.Prepare("INSERT INTO device_request_broadcasts (device_request_id, devices_var_name_id,file_column,file_row, value) VALUES(?,?,?,?,?)")
+	// stmt, err := db.Prepare("INSERT INTO device_request_broadcasts (device_request_id, devices_var_name_id,file_column,file_row, value) VALUES(?,?,?,?,?)")
 
-	if err != nil {
-		fmt.Print(err.Error())
-	}
+	// if err != nil {
+	// 	fmt.Print(err.Error())
+	// }
 
-	res, err := stmt.Exec("1", "1", "1", "1", time.Now()) // Pass alues
-	if err != nil {
-		fmt.Print(err.Error())
-	}
+	// res, err := stmt.Exec("1", "1", "1", "1", time.Now()) // Pass alues
+	// if err != nil {
+	// 	fmt.Print(err.Error())
+	// }
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		fmt.Print(err.Error())
-	}
+	// id, err := res.LastInsertId()
+	// if err != nil {
+	// 	fmt.Print(err.Error())
+	// }
 
-	fmt.Print(id)
+	// fmt.Print(id)
 
 	var recordTotal int
 	for {
@@ -144,7 +154,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 
 		logrus.Info("LDAP Contacts batch count: ", len(records.Entries))
 
-		// fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
+		fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
 
 		recordTotal += len(records.Entries) // returns slice of structs [Entry]
 
