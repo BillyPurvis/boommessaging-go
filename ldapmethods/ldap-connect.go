@@ -81,6 +81,22 @@ func mapToStringRepresentation(hashMap map[string]string) []string {
 	return attributeFields
 }
 
+func calculateBatchLimit(connectionDetails *ConnectionDetails) (uint32, error) {
+	var batchLimit uint32 = 1000
+	if connectionDetails.BatchLimit != "" {
+		customBatchLimit, err := convertStringToUint32(connectionDetails.BatchLimit)
+		if err != nil {
+			return 0, err
+		}
+		// If the incoming batch limit is more than 1000, don't update batch limit
+		if customBatchLimit <= 1000 {
+			batchLimit = customBatchLimit
+		}
+	}
+
+	return batchLimit, nil
+}
+
 // GetEntries Return results from LDAP
 func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{}, error) {
 
@@ -98,16 +114,9 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	}
 	defer conn.Close()
 
-	var batchLimit uint32 = 1000
-	if connectionDetails.BatchLimit != "" {
-		customBatchLimit, err := convertStringToUint32(connectionDetails.BatchLimit)
-		if err != nil {
-			return nil, err
-		}
-		// If the incoming batch limit is more than 1000, don't update batch limit
-		if customBatchLimit <= 1000 {
-			batchLimit = customBatchLimit
-		}
+	batchLimit, err := calculateBatchLimit(connectionDetails)
+	if err != nil {
+		return nil, err
 	}
 
 	// Build search query and parameters.
@@ -177,7 +186,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 		break
 	}
 
-	fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
+	// fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
 	// // Make Search Request
 	// sr, err := conn.Search(searchRequest)
 	// if err != nil {
