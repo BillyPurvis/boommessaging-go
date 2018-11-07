@@ -20,7 +20,7 @@ import (
 
 func main() {
 	// Configure Logger
-	f, fileErr := os.OpenFile("./error.log", os.O_WRONLY|os.O_CREATE, 0755)
+	f, fileErr := os.OpenFile("./app.log", os.O_WRONLY|os.O_CREATE, 0755)
 	if fileErr != nil {
 		log.Fatal(fileErr) // We must have log working
 	}
