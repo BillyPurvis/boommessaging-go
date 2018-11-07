@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/go-playground/validator.v9"
 
+	"github.com/BillyPurvis/boommessaging-go/database"
 	logrus "github.com/sirupsen/logrus"
 	ldap "gopkg.in/ldap.v2"
 )
@@ -124,26 +125,7 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 	pagingControl := ldap.NewControlPaging(batchLimit)
 	attributeFields := mapToStringRepresentation(connectionDetails.Fields)
 
-	// // test insert
-	// db := database.DBCon
-
-	// stmt, err := db.Prepare("INSERT INTO device_request_broadcasts (device_request_id, devices_var_name_id,file_column,file_row, value) VALUES(?,?,?,?,?)")
-
-	// if err != nil {
-	// 	fmt.Print(err.Error())
-	// }
-
-	// res, err := stmt.Exec("1", "1", "1", "1", time.Now()) // Pass alues
-	// if err != nil {
-	// 	fmt.Print(err.Error())
-	// }
-
-	// id, err := res.LastInsertId()
-	// if err != nil {
-	// 	fmt.Print(err.Error())
-	// }
-
-	// fmt.Print(id)
+	db := database.DBCon
 
 	var recordTotal int
 	for {
@@ -163,60 +145,51 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 
 		logrus.Info("LDAP Contacts batch count: ", len(records.Entries))
 
-		fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
+		//fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
 
 		recordTotal += len(records.Entries) // returns slice of structs [Entry]
 
 		// Records is a batch of 1000 records, pipe them off to be inserted batch by batch
+		valuePlaceholders := make([]string, 0, 150)
+		values := make([]interface{}, 0, 150)
 
-		// //
-		// for _, entry := range records.Entries {
-		// 	for _, field := range connectionDetails.Fields {
-		// 		// TODO: Add Logic for saving to device vars
-		// 		field = entry.GetAttributeValue(field)
+		for i, entry := range records.Entries {
+			for fieldVarID, field := range connectionDetails.Fields {
+				fieldValue := entry.GetAttributeValue(field)
 
-		// 	}
-		// }
-		// Loop through fields and map and store.
-		updatedControl := ldap.FindControl(records.Controls, ldap.ControlTypePaging)
-		if ctrl, ok := updatedControl.(*ldap.ControlPaging); ctrl != nil && ok && len(ctrl.Cookie) != 0 {
-			pagingControl.SetCookie(ctrl.Cookie)
-			continue
+				valuePlaceholders = append(valuePlaceholders, "(?,?,?,?)")
+				values = append(values, connectionDetails.RequestID, fieldVarID, i, fieldValue)
+			}
 		}
+
+		//  field_count * placeholder_count * record_counts = max batch count
+		q := fmt.Sprintf("INSERT INTO device_integration_vars (device_request_id, devices_var_name_id,record_row_index, value) VALUES %s", strings.Join(valuePlaceholders, ","))
+		stmt, err := db.Prepare(q)
+		if err != nil {
+			fmt.Print(err.Error())
+		}
+
+		res, err := stmt.Exec(values...)
+		if err != nil {
+			fmt.Print(err.Error())
+		}
+
+		count, _ := res.RowsAffected()
+
+		logrus.Info(fmt.Sprintf("Rows Insert for RequestID: %v. Inserted %v rows", connectionDetails.RequestID, count))
+
+		// // Loop through fields and map and store.
+		// updatedControl := ldap.FindControl(records.Controls, ldap.ControlTypePaging)
+		// if ctrl, ok := updatedControl.(*ldap.ControlPaging); ctrl != nil && ok && len(ctrl.Cookie) != 0 {
+		// 	pagingControl.SetCookie(ctrl.Cookie)
+		// 	continue
+		// }
 		break
 	}
 
-	// fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
-	// // Make Search Request
-	// sr, err := conn.Search(searchRequest)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
 
-	//TODO: We don't need this, we just need to return a status
-	// // Create list of maps
-	// entryList := make([]map[string]interface{}, 0)
-	// // Iterate through AD Records
-	// for i, entry := range sr.Entries {
-
-	// 	// Create new map item and append to list
-	// 	entryList = append(entryList, make(map[string]interface{}))
-
-	// 	// Iterate through requestedFields
-	// 	for _, field := range connectionDetails.Fields {
-
-	// 		fieldValue := entry.GetAttributeValue(field)
-
-	// 		uuid := uuid.CreateUUID()
-	// 		entryList[i]["uuid"] = uuid
-	// 		// Check for empty fields and assign nil if empty
-	// 		if fieldValue != "" {
-	// 			entryList[i][field] = fieldValue
-	// 		} else {
-	// 			entryList[i][field] = nil
-	// 		}
-	// 	}
-	// }
+	// We might need to return a success message
 	m := make([]map[string]interface{}, 0)
 	return m, nil
 }
