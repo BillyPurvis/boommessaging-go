@@ -8,6 +8,7 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 
 	"github.com/BillyPurvis/boommessaging-go/database"
+	"github.com/BillyPurvis/boommessaging-go/response"
 	logrus "github.com/sirupsen/logrus"
 	ldap "gopkg.in/ldap.v2"
 )
@@ -29,10 +30,6 @@ type ConnectionDetails struct {
 	Fields      map[string]string      `json:"fields,omitempty"`
 	QueryParams map[string]interface{} `json:"query_params,omitempty"`
 	BatchLimit  string                 `json:"batch_limit,omitempty"`
-}
-
-type resultsSet struct {
-	Result []map[string]string
 }
 
 // LDAPConnectionBind Returns LDAP Connection Binding
@@ -99,7 +96,7 @@ func calculateBatchLimit(connectionDetails *ConnectionDetails) (uint32, error) {
 }
 
 // GetEntries Return results from LDAP
-func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{}, error) {
+func GetEntries(connectionDetails *ConnectionDetails) (*response.JSONResponse, error) {
 
 	// Validate Struct first
 	validate = validator.New()
@@ -144,54 +141,57 @@ func GetEntries(connectionDetails *ConnectionDetails) ([]map[string]interface{},
 		}
 
 		logrus.Info("LDAP Contacts batch count: ", len(records.Entries))
-
-		//fmt.Printf("\n====================\nRecord Count: %v\n====================\n", len(records.Entries))
-
-		recordTotal += len(records.Entries) // returns slice of structs [Entry]
+		recordTotal += len(records.Entries)
 
 		// Records is a batch of 1000 records, pipe them off to be inserted batch by batch
-		valuePlaceholders := make([]string, 0, 150)
-		values := make([]interface{}, 0, 150)
+		columnPlaceholders := make([]string, 0)
+		columnValues := make([]interface{}, 0)
 
-		for i, entry := range records.Entries {
-			for fieldVarID, field := range connectionDetails.Fields {
-				fieldValue := entry.GetAttributeValue(field)
+		/*
+			Loop through the entries from LDAP and then loop the fields from the request body
+			to get the field values from the entry
+		*/
+		for rowIndex, entry := range records.Entries {
+			for fieldVarID, adField := range connectionDetails.Fields {
+				adFieldValue := entry.GetAttributeValue(adField)
 
-				valuePlaceholders = append(valuePlaceholders, "(?,?,?,?)")
-				values = append(values, connectionDetails.RequestID, fieldVarID, i, fieldValue)
+				columnPlaceholders = append(columnPlaceholders, "(?,?,?,?)")
+				columnValues = append(columnValues, connectionDetails.RequestID, fieldVarID, rowIndex, adFieldValue)
 			}
 		}
 
 		//  field_count * placeholder_count * record_counts = max batch count
-		q := fmt.Sprintf("INSERT INTO device_integration_vars (device_request_id, devices_var_name_id,record_row_index, value) VALUES %s", strings.Join(valuePlaceholders, ","))
-		stmt, err := db.Prepare(q)
+		query := fmt.Sprintf("INSERT INTO device_integration_vars (device_request_id, devices_var_name_id,record_row_index, value) VALUES %s", strings.Join(columnPlaceholders, ","))
+		stmt, err := db.Prepare(query)
 		if err != nil {
 			fmt.Print(err.Error())
 		}
 
-		res, err := stmt.Exec(values...)
+		res, err := stmt.Exec(columnValues...)
 		if err != nil {
 			fmt.Print(err.Error())
 		}
 
 		count, _ := res.RowsAffected()
-
 		logrus.Info(fmt.Sprintf("Rows Insert for RequestID: %v. Inserted %v rows", connectionDetails.RequestID, count))
 
-		// // Loop through fields and map and store.
-		// updatedControl := ldap.FindControl(records.Controls, ldap.ControlTypePaging)
-		// if ctrl, ok := updatedControl.(*ldap.ControlPaging); ctrl != nil && ok && len(ctrl.Cookie) != 0 {
-		// 	pagingControl.SetCookie(ctrl.Cookie)
-		// 	continue
-		// }
+		/*
+			AD over LDAP will return a cookie with each data set returned to indicate there are more records to retrive.
+			The batch size will be requested until a cookie is no longer returned, indicating there are no more records after this batch.
+		*/
+		updatedControl := ldap.FindControl(records.Controls, ldap.ControlTypePaging)
+		if ctrl, ok := updatedControl.(*ldap.ControlPaging); ctrl != nil && ok && len(ctrl.Cookie) != 0 {
+			pagingControl.SetCookie(ctrl.Cookie)
+			continue
+		}
 		break
 	}
 
-	fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
-
-	// We might need to return a success message
-	m := make([]map[string]interface{}, 0)
-	return m, nil
+	// fmt.Printf("\n====================\nRecord Count: %v\n====================\n", recordTotal)
+	return &response.JSONResponse{
+		Message: "Successfully requested data and inserted to the database",
+		Status:  200,
+		Count:   recordTotal}, nil
 }
 
 // GetEntryAttributes Returns attribute field lists for an entry
