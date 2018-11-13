@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/BillyPurvis/boommessaging-go/azurehandler"
 	"github.com/BillyPurvis/boommessaging-go/database"
 	"github.com/BillyPurvis/boommessaging-go/ldaphandler"
 	"github.com/BillyPurvis/boommessaging-go/middleware"
@@ -59,7 +60,7 @@ func serverBootMessage(AppURL string, AppPort string) {
 	fmt.Println("=====================================================================================")
 	fig := figure.NewFigure("BOOMERANG", "slant", true)
 	fig.Print()
-	fmt.Println("\n=====================================================================================\n\n")
+	fmt.Print("\n=====================================================================================\n\n")
 	fmt.Printf("Author: Billy Purvis\n\n\n* Server Status: Operational at http://%v:%v\n* Database Status: Connected\n\n", AppURL, AppPort)
 
 }

@@ -1,4 +1,4 @@
-package auzurehandler
+package azurehandler
 
 import (
 	"fmt"
