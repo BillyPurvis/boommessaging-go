@@ -50,6 +50,7 @@ func main() {
 
 	router.POST("/ldap/attributes", middleware.AuthenticateWare(ldaphandler.GetAttributes))
 	router.POST("/ldap/contacts", middleware.AuthenticateWare(ldaphandler.GetContacts))
+	router.POST("/azure/contacts", middleware.AuthenticateWare(azurehandler.GetContacts))
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", AppPort), middleware.SetJSONHeader(router)))
 }
